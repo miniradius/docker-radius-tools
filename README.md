@@ -5,14 +5,14 @@ Includes testing tools from [FreeRADIUS](https://freeradius.org/):
 
 Please note that this is a Docker file only and NO SOFTWARE MENTIONED ABOVE IS DISTRIBUTED IN THIS REPOSITORY. All the software is downloaded from official repositories and built during the Docker build process.
 
-## Install:
+## Install
 
 - `git clone git@github.com:miniradius/docker-radius-tools.git`
 - `cd docker-radius-tools`
 - `docker build . -t radius-tools`
 - Try `docker run -it --rm radius-tools eapol_test -v`
 
-## Notes:
+## Notes
 
 - If you're going to use tools really often, create yourself Bash aliases.
 - Keep the localhost address in mind as we run the utilities from Docker. The localhost address is of course the address of the docker container, not the host. Use either the `host.docker.internal` address or the host's external IP:
@@ -30,7 +30,7 @@ docker run -it --rm radius-tools bash -c 'echo "Message-Authenticator = 0x00" | 
 - If radperf reads users from a CSV, watch out for the value of the `-c` parameter, because the value acts as a multiplier of the loaded accounts. For example, if the CSV loads 1000 accounts then `-c 2` will fire 2000 requests
 - In the root directory of the container there are three pre-generated CSV files (`user,password` pairs) labeled with the number of lines: `accounts-10.csv`, `accounts-100.csv` and `accounts-1000.csv`. They are available here for radperf or other testing purposes.
 
-## Examples for RADIUS server on localhost (host.docker.internal):
+## Examples for RADIUS server on localhost (host.docker.internal)
 
 ```
 docker run -it --rm radius-tools bash
