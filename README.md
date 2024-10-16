@@ -1,6 +1,6 @@
 # RADIUS testing tools in Docker
 
-Includes [FreeRADIUS](https://freeradius.org/) testing tools:
+Includes [FreeRADIUS](https://github.com/FreeRADIUS) testing tools:
 - `eapol_test, radclient, radcrypt, radeapclient, radlast, radperf, radsecret, radperf, radsniff, radsqlrelay, radtest, radwho, radzap`
 
 Please note that this repository is only Dockerfile tooling and NO SOFTWARE MENTIONED ABOVE IS DISTRIBUTED IN THIS REPOSITORY. All the software is downloaded from official repositories and built during the Docker build process.
