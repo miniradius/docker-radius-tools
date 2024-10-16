@@ -1,7 +1,7 @@
 # RADIUS testing tools in Docker
 
 Includes [FreeRADIUS](https://freeradius.org/) testing tools:
-- `eapol_test, radclient, radcrypt, radeapclient, radlast, radperf, radperf, radsniff, radsqlrelay, radtest, radwho, radzap`
+- `eapol_test, radclient, radcrypt, radeapclient, radlast, radperf, radsecret, radperf, radsniff, radsqlrelay, radtest, radwho, radzap`
 
 Please note that this repository is only Dockerfile tooling and NO SOFTWARE MENTIONED ABOVE IS DISTRIBUTED IN THIS REPOSITORY. All the software is downloaded from official repositories and built during the Docker build process.
 
@@ -14,7 +14,7 @@ Please note that this repository is only Dockerfile tooling and NO SOFTWARE MENT
 
 ## Notes
 - Based on Ubuntu 24.04 amdd64 base image. Running on non-amd64 architectures may cause warnings which can be suppressed with `--platform linux/amd64` e.g. `docker run -it --platform linux/amd64 radius-tools radperf`
-- If you're going to use tools really often, create yourself Bash aliases.
+- If you're going to use tools really often, create yourself shell aliases.
 - Keep the localhost address in mind as we run the tools from the Docker network environment. The localhost address as seen by tools is of course the address of the docker container, not the host. Use either the `host.docker.internal` address or the external IP address of the host if you are testing local RADIUS services:
 
 ```
