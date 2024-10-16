@@ -6,10 +6,12 @@ Includes [FreeRADIUS](https://github.com/FreeRADIUS) testing tools:
 Please note that this repository is only Dockerfile tooling and NO SOFTWARE MENTIONED ABOVE IS DISTRIBUTED IN THIS REPOSITORY. All the software is downloaded from official repositories and built during the Docker build process.
 
 ## Install
-
-- `git clone git@github.com:miniradius/docker-radius-tools.git`
-- `cd docker-radius-tools`
-- `docker build --platform linux/amd64 . -t radius-tools`
+- Container build
+```
+git clone git@github.com:miniradius/docker-radius-tools.git
+cd docker-radius-tools
+docker build --platform linux/amd64 . -t radius-tools
+```
 - Try `docker run -it radius-tools eapol_test -v`
 
 ## Notes
