@@ -102,7 +102,7 @@ docker run --rm ghcr.io/miniradius/docker-radius-tools:latest \
 - `-n` sets the rate for new requests in packets per second. Retransmissions follow their own timeouts.
 - `-s` prints a summary. Use `-x` to debug individual requests.
 
-## Original RadPerf from Network RADIUS
+## Legacy RadPerf from Network RADIUS
 
 `Dockerfile.radperf-non-free` builds an optional `linux/amd64` image with the original proprietary [RadPerf 2.0.1 package from Network RADIUS](https://networkradius.com/radius-performance-testing/). Redistribution of that image requires prior permission from Network RADIUS.
 
