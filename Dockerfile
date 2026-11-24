@@ -24,7 +24,8 @@ RUN git init /freeradius-server && \
     rm -rf /freeradius-server
 
 # Install radperf
-RUN curl -O https://networkradius.com/assets/packages/radperf/radperf_2.0.1_amd64.deb && \
+RUN curl --fail --silent --show-error --location --remote-name \
+    https://networkradius.com/assets/packages/radperf/radperf_2.0.1_amd64.deb && \
     dpkg -i radperf_2.0.1_amd64.deb && \
     rm -f radperf_2.0.1_amd64.deb && \
     apt-get remove -y curl && \
