@@ -33,6 +33,8 @@ RUN curl --fail --silent --show-error --location --remote-name \
     ln -s /usr/sbin/radperf /usr/bin/radperf && \
     ln -s /usr/share/freeradius/* /usr/share
 
+RUN radperf -v
+
 # CSV (user,password pairs) for radperf
 COPY ./accounts-10.csv ./accounts-100.csv ./accounts-1000.csv /accounts/
 
