@@ -104,7 +104,7 @@ docker run --rm ghcr.io/miniradius/docker-radius-tools:latest \
 
 ## Legacy RadPerf from Network RADIUS
 
-`Dockerfile.radperf-non-free` builds an optional `linux/amd64` image with the original proprietary [RadPerf 2.0.1 package from Network RADIUS](https://networkradius.com/radius-performance-testing/). Redistribution of that image requires prior permission from Network RADIUS.
+`Dockerfile.radperf-non-free` builds an optional `linux/amd64` image with the proprietary [RadPerf 2.0.1 package from Network RADIUS](https://networkradius.com/radius-performance-testing/). Redistribution of that image requires prior permission from Network RADIUS.
 
 ```sh
 docker build --platform linux/amd64 -f Dockerfile.radperf-non-free -t docker-radius-tools:local .
