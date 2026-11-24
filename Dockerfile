@@ -6,7 +6,6 @@ LABEL architecture="amd64" \
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEBCONF_NOWARNINGS=yes
-ARG WPA_SUPPLICANT_VERSION=2.11
 
 # Init bind9-utils, dpkg, freeradius-comon (dictionary) freeradius-utils (tools) and others
 RUN apt-get update -y && \
@@ -16,9 +15,11 @@ RUN apt-get update -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists
 
-# Install eapol_test
-RUN git clone --depth 1 --single-branch --branch v3.2.x https://github.com/FreeRADIUS/freeradius-server.git && \
-    /freeradius-server/scripts/ci/eapol_test-build.sh && \
+# Build eapol_test from hostap 2.10 using the pinned FreeRADIUS build script.
+RUN git init /freeradius-server && \
+    git -C /freeradius-server fetch --depth 1 https://github.com/FreeRADIUS/freeradius-server.git 3ded55b6df1a57a46021a62971c8d0ed5a62d942 && \
+    git -C /freeradius-server checkout --detach FETCH_HEAD && \
+    HOSTAPD_GIT_COMMIT=cff80b4f7d3c0a47c052e8187d671710f48939e4 /freeradius-server/scripts/ci/eapol_test-build.sh && \
     cp /freeradius-server/scripts/ci/eapol_test/eapol_test /usr/bin/ && \
     rm -rf /freeradius-server
 
