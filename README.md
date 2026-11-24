@@ -15,7 +15,7 @@ docker build --platform linux/amd64 . -t radius-tools
 - Try `docker run -it radius-tools eapol_test -v`
 
 ## Notes
-- Based on Ubuntu 24.04 amdd64 base image. Running on non-amd64 architectures may cause warnings which can be suppressed with `--platform linux/amd64` e.g. `docker run -it --platform linux/amd64 radius-tools radperf`
+- Based on Debian 13 (Trixie) Slim for `linux/amd64`. On other architectures, specify `--platform linux/amd64`, for example `docker run -it --platform linux/amd64 radius-tools radperf`.
 - If you're going to use tools really often, create yourself shell aliases.
 - Keep the localhost address in mind as we run the tools from the Docker network environment. The localhost address as seen by tools is of course the address of the docker container, not the host. Use either the `host.docker.internal` address or the external IP address of the host if you are testing local RADIUS services:
 
