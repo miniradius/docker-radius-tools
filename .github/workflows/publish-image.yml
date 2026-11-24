@@ -14,7 +14,11 @@ defaults:
 
 jobs:
   build:
+    if: github.event_name != 'release' || github.event.release.prerelease == false
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.event_name == 'release' && 'publish-oci-latest' || github.run_id }}
+      cancel-in-progress: false
     permissions:
       contents: write
       packages: write
@@ -78,21 +82,24 @@ jobs:
           sources_archive="$RUNNER_TEMP/debian-sources-$index_hash.tar"
           tar -cf "$sources_archive" -C "$bundle" .
           printf 'SOURCES_ARCHIVE=%s\n' "$sources_archive" >> "$GITHUB_ENV"
-      - name: Attach corresponding sources to the release
+      - name: Publish the latest stable OCI image to GHCR
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          latest_tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          if [[ "$RELEASE_TAG" != "$latest_tag" ]]; then
+            echo "Skipping publication because $latest_tag is the latest release."
+            exit 0
+          fi
+
           sources_name=${SOURCES_ARCHIVE##*/}
           existing=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
           if ! grep -Fxq -- "$sources_name" <<< "$existing"; then
             gh release upload "$RELEASE_TAG" "$SOURCES_ARCHIVE" --repo "$GITHUB_REPOSITORY"
           fi
-      - name: Publish the verified OCI index to GHCR
-        if: github.event_name == 'release'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
+
+          image_name=$(printf '%s' "$GITHUB_REPOSITORY" | LC_ALL=C tr '[:upper:]' '[:lower:]')
           printf '%s' "$GH_TOKEN" | skopeo login --username "$GITHUB_ACTOR" --password-stdin ghcr.io
           skopeo copy --all --preserve-digests "oci:$RUNNER_TEMP/radius-image" \
-            "docker://ghcr.io/${GITHUB_REPOSITORY,,}:$RELEASE_TAG"
+            "docker://ghcr.io/$image_name:latest"

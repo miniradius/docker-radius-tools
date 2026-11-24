@@ -22,7 +22,7 @@ The build selects and verifies the `radperf-rs` binary for the target architectu
 
 ## Container registry
 
-The [release workflow](.github/workflows/publish-image.yml) builds and checks both architectures. When a GitHub Release is published, it pushes a single OCI image index to `ghcr.io/miniradius/docker-radius-tools` under the release tag. A manual workflow run verifies the build and source collection locally on the runner.
+The [release workflow](.github/workflows/publish-image.yml) builds and checks both architectures. It publishes the latest stable GitHub Release as a single OCI image index at `ghcr.io/miniradius/docker-radius-tools:latest`. The GitHub release tag is recorded in the image metadata. A manual workflow run verifies the build and source collection locally on the runner.
 
 The workflow generates `debian-sources-<index-sha256>.tar` during the release build and uploads it as an asset to the [GitHub Release](https://github.com/miniradius/docker-radius-tools/releases) before pushing the image. The archive contains the OCI index, the package inventory for each architecture and the exact Debian source packages for those inventories. The image contains the copyright notices for the packaged utilities, `eapol_test` and `radperf-rs`.
 
