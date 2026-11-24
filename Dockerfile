@@ -1,37 +1,60 @@
-FROM --platform=linux/amd64 debian:trixie-slim
-
-LABEL architecture="amd64" \
-      maintainer="github.com/miniradius" \
-      desc="RADIUS CLI utilities from FreeRADIUS (eapol_test, radclient, radcrypt, radeapclient, radlast, radperf, radsecret, radsniff, radsqlrelay, radtest, radwho, radzap)"
+FROM debian:trixie-slim AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEBCONF_NOWARNINGS=yes
 
-# Init bind9-utils, dpkg, freeradius-comon (dictionary) freeradius-utils (tools) and others
 RUN apt-get update -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    --no-install-recommends ca-certificates bind9-utils curl freeradius-common freeradius-utils git \
+    apt-get install -y --no-install-recommends ca-certificates curl git \
     build-essential pkg-config libssl-dev libnl-3-dev libnl-genl-3-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists
+    rm -rf /var/lib/apt/lists/*
 
 # Build eapol_test from hostap 2.10 using the pinned FreeRADIUS build script.
 RUN git init /freeradius-server && \
     git -C /freeradius-server fetch --depth 1 https://github.com/FreeRADIUS/freeradius-server.git 3ded55b6df1a57a46021a62971c8d0ed5a62d942 && \
     git -C /freeradius-server checkout --detach FETCH_HEAD && \
-    HOSTAPD_GIT_COMMIT=cff80b4f7d3c0a47c052e8187d671710f48939e4 /freeradius-server/scripts/ci/eapol_test-build.sh && \
-    cp /freeradius-server/scripts/ci/eapol_test/eapol_test /usr/bin/ && \
-    rm -rf /freeradius-server
+    mkdir /hostap-build && \
+    BUILD_DIR=/hostap-build HOSTAPD_GIT_COMMIT=cff80b4f7d3c0a47c052e8187d671710f48939e4 /freeradius-server/scripts/ci/eapol_test-build.sh && \
+    install -m 0755 /freeradius-server/scripts/ci/eapol_test/eapol_test /usr/bin/eapol_test && \
+    install -Dm 0644 /hostap-build/hostapd/COPYING /usr/share/doc/eapol_test/copyright
 
-# Install radperf
-RUN curl --fail --silent --show-error --location --remote-name \
-    https://networkradius.com/assets/packages/radperf/radperf_2.0.1_amd64.deb && \
-    dpkg -i radperf_2.0.1_amd64.deb && \
-    rm -f radperf_2.0.1_amd64.deb && \
-    apt-get remove -y curl && \
-    apt-get autoremove -y && \
-    ln -s /usr/sbin/radperf /usr/bin/radperf && \
-    ln -s /usr/share/freeradius/* /usr/share
+# Install radperf-rs v0.1.0 from the verified release assets.
+RUN set -eu; \
+    radperf_version=v0.1.0; \
+    radperf_asset="radperf-linux-$(dpkg --print-architecture)"; \
+    radperf_release="https://github.com/miniradius/radperf-rs/releases/download/${radperf_version}"; \
+    radperf_dir="$(mktemp -d)"; \
+    cd "$radperf_dir"; \
+    curl --fail --silent --show-error --location --remote-name "${radperf_release}/SHA256SUMS"; \
+    printf '%s  %s\n' 35b7af49423a2e848b187bf39cad68c527fdf3b0bf0ce1c6406dea598f7c2ffa SHA256SUMS | sha256sum --check; \
+    curl --fail --silent --show-error --location --remote-name "${radperf_release}/${radperf_asset}"; \
+    sha256sum --check --strict --ignore-missing SHA256SUMS; \
+    install -m 0755 "$radperf_asset" /usr/local/bin/radperf; \
+    curl --fail --silent --show-error --location --output LICENSE \
+        "https://raw.githubusercontent.com/miniradius/radperf-rs/${radperf_version}/LICENSE"; \
+    install -Dm 0644 LICENSE /usr/share/doc/radperf-rs/copyright
+
+FROM debian:trixie-slim
+
+LABEL maintainer="github.com/miniradius" \
+      org.opencontainers.image.source="https://github.com/miniradius/docker-radius-tools" \
+      org.opencontainers.image.description="RADIUS CLI utilities, including eapol_test and radperf-rs"
+
+# Record source versions from the base layers before installing runtime packages.
+RUN mkdir -p /usr/share/doc/docker-radius-tools && \
+    dpkg-query -W -f='${db:Status-Status} ${source:Package}=${source:Version}\n' | \
+        awk '$1 == "installed" { print $2 }' > /usr/share/doc/docker-radius-tools/debian-base-sources.txt && \
+    test -s /usr/share/doc/docker-radius-tools/debian-base-sources.txt && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates bind9-utils freeradius-utils libssl3t64 libgcc-s1 && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/bin/eapol_test /usr/bin/eapol_test
+COPY --from=build /usr/local/bin/radperf /usr/local/bin/radperf
+COPY --from=build /usr/share/doc/eapol_test/ /usr/share/doc/eapol_test/
+COPY --from=build /usr/share/doc/radperf-rs/ /usr/share/doc/radperf-rs/
+
+ENV FREERADIUS_DICTIONARY_PATH=/usr/share/freeradius
 
 RUN radperf -v
 

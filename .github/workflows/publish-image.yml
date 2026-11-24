@@ -1,0 +1,98 @@
+name: Publish OCI image
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || 'dry-run' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - name: Install Skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends skopeo
+      - name: Build both platforms as an OCI image
+        run: |
+          [[ "$RELEASE_TAG" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$ ]]
+          docker buildx build --file Dockerfile --platform linux/amd64,linux/arm64 \
+            --provenance=false \
+            --label "org.opencontainers.image.version=$RELEASE_TAG" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.documentation=https://github.com/$GITHUB_REPOSITORY/releases/tag/$RELEASE_TAG" \
+            --output "type=oci,tar=false,dest=$RUNNER_TEMP/radius-image" .
+      - name: Verify the image and collect Debian sources
+        run: |
+          bundle="$RUNNER_TEMP/radius-sources"
+          mkdir -p "$bundle"
+          for arch in amd64 arm64; do
+            image="radius-tools-check:$arch"
+            skopeo --override-os linux --override-arch "$arch" \
+              copy "oci:$RUNNER_TEMP/radius-image" "docker-daemon:$image"
+            docker run --rm --network none --platform "linux/$arch" "$image" \
+              sh -ec 'test "$(dpkg --print-architecture)" = "$1"
+                eapol_test -v
+                radperf -v
+                test -r "$FREERADIUS_DICTIONARY_PATH/dictionary"
+                test -r /usr/share/doc/eapol_test/copyright
+                test -r /accounts/accounts-1000.csv' check "$arch"
+            docker run --rm -i --network none --platform "linux/$arch" "$image" \
+              bash -euo pipefail -s <<'SH' | sort -u > "$bundle/$arch.txt"
+          cat /usr/share/doc/docker-radius-tools/debian-base-sources.txt
+          dpkg-query -W -f='${db:Status-Status} ${source:Package}=${source:Version}\n' |
+            awk '$1 == "installed" { print $2 }'
+          SH
+            test -s "$bundle/$arch.txt"
+          done
+          docker run --rm \
+            --mount "type=bind,source=$bundle,target=/bundle" \
+            --mount "type=bind,source=$PWD/scripts/collect-debian-sources.sh,target=/collect-sources.sh,readonly" \
+            radius-tools-check:amd64 bash /collect-sources.sh \
+            /bundle/debian /bundle/amd64.txt /bundle/arm64.txt
+          skopeo inspect --raw "oci:$RUNNER_TEMP/radius-image" > "$bundle/index.json"
+          jq -e '.mediaType == "application/vnd.oci.image.index.v1+json" and
+            ([.manifests[].platform | "\(.os)/\(.architecture)"] | sort) ==
+            ["linux/amd64", "linux/arm64"]' "$bundle/index.json"
+          index_digest=$(skopeo manifest-digest "$bundle/index.json")
+          index_hash=${index_digest#sha256:}
+          sources_archive="$RUNNER_TEMP/debian-sources-$index_hash.tar"
+          tar -cf "$sources_archive" -C "$bundle" .
+          printf 'SOURCES_ARCHIVE=%s\n' "$sources_archive" >> "$GITHUB_ENV"
+      - name: Attach corresponding sources to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sources_name=${SOURCES_ARCHIVE##*/}
+          existing=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+          if ! grep -Fxq -- "$sources_name" <<< "$existing"; then
+            gh release upload "$RELEASE_TAG" "$SOURCES_ARCHIVE" --repo "$GITHUB_REPOSITORY"
+          fi
+      - name: Publish the verified OCI index to GHCR
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GH_TOKEN" | skopeo login --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          skopeo copy --all --preserve-digests "oci:$RUNNER_TEMP/radius-image" \
+            "docker://ghcr.io/${GITHUB_REPOSITORY,,}:$RELEASE_TAG"
