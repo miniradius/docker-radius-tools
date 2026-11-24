@@ -37,6 +37,8 @@ Use a shell alias to shorten commands you run frequently. For example, add this 
 alias radius-tools='docker run --rm -i ghcr.io/miniradius/docker-radius-tools:latest'
 ```
 
+On Docker Engine for Linux, add `--add-host=host.docker.internal:host-gateway` inside the alias definition, before the image name, when connecting to a server on the host.
+
 Then use the alias to check the tool versions.
 
 ```sh
@@ -44,7 +46,7 @@ radius-tools eapol_test -v
 radius-tools radperf -v
 ```
 
-The `-i` option keeps standard input open so you can pipe RADIUS attributes into `radclient`. This example sends a status request to a server that accepts status requests on port 1812.
+The `-i` option keeps standard input open so you can pipe RADIUS attributes into `radclient`. Use the port that accepts `Status-Server` requests on your server.
 
 ```sh
 printf '%s\n' 'Message-Authenticator = 0x00' |
@@ -67,6 +69,8 @@ Inside the container, `localhost` refers to the container itself. To reach a RAD
 
 The server must listen on an address reachable from the container. For a remote server, use its DNS name or IP address.
 
+Configure the server to accept the source IP it sees as a RADIUS client. Use the same shared secret in the client configuration and in the commands below.
+
 ## Examples
 
 Replace `joe`, `foo` and `abcd` with your test username, password and RADIUS shared secret. Adjust the port to match the server.
@@ -78,7 +82,7 @@ docker run --rm ghcr.io/miniradius/docker-radius-tools:latest \
   radtest joe foo host.docker.internal:1812 1 abcd
 ```
 
-Send a status request with `radclient` if the server accepts status requests on the specified port. Use `docker run -i` to pass input from the host shell. To run a pipeline entirely inside the container, pass it to `bash -c`.
+Send a status request with `radclient`. Use `1812` if your authentication listener accepts `Status-Server` requests. If you have enabled the dedicated FreeRADIUS status listener, its example configuration uses UDP port `18121`. Use `docker run -i` to pass input from the host shell. To run a pipeline entirely inside the container, pass it to `bash -c`. [FreeRADIUS status listener](https://github.com/FreeRADIUS/freeradius-server/blob/v3.2.x/raddb/sites-available/status)
 
 ```sh
 printf '%s\n' 'Message-Authenticator = 0x00' |
@@ -86,7 +90,7 @@ printf '%s\n' 'Message-Authenticator = 0x00' |
     radclient -r 1 host.docker.internal:1812 status abcd
 ```
 
-Run an authentication load test with `radperf`. The image includes `accounts-10.csv`, `accounts-100.csv` and `accounts-1000.csv` under `/accounts/`. Each file contains test `user,password` pairs.
+Run an authentication load test with `radperf`. The image includes `accounts-10.csv`, `accounts-100.csv` and `accounts-1000.csv` under `/accounts/`. Each file contains test `user,password` pairs. Configure matching accounts and passwords on the server if you expect successful authentication.
 
 ```sh
 docker run --rm ghcr.io/miniradius/docker-radius-tools:latest \
@@ -103,6 +107,6 @@ docker run --rm ghcr.io/miniradius/docker-radius-tools:latest \
 `Dockerfile.radperf-non-free` builds an optional `linux/amd64` image with the original proprietary [RadPerf 2.0.1 package from Network RADIUS](https://networkradius.com/radius-performance-testing/). Redistribution of that image requires prior permission from Network RADIUS.
 
 ```sh
-docker build --platform linux/amd64 -f Dockerfile.radperf-non-free -t radius-tools-non-free .
-docker run --rm --platform linux/amd64 radius-tools-non-free radperf -v
+docker build --platform linux/amd64 -f Dockerfile.radperf-non-free -t docker-radius-tools:local .
+docker run --rm --platform linux/amd64 docker-radius-tools:local radperf -v
 ```
