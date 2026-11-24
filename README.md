@@ -1,45 +1,60 @@
 # RADIUS testing tools in Docker
 
-Includes [FreeRADIUS](https://github.com/FreeRADIUS) testing tools:
-- `eapol_test, radclient, radcrypt, radeapclient, radlast, radperf, radsecret, radperf, radsniff, radsqlrelay, radtest, radwho, radzap`
+Container image for testing RADIUS on Debian 13 (Trixie) Slim, targeting `linux/amd64`.
 
-Please note that this repository is only Dockerfile tooling and NO SOFTWARE MENTIONED ABOVE IS DISTRIBUTED IN THIS REPOSITORY. All the software is downloaded from official repositories and built during the Docker build process.
+- Debian's [FreeRADIUS utilities](https://packages.debian.org/trixie/freeradius-utils) provide `radclient`, `radcrypt`, `radeapclient`, `radlast`, `radsecret`, `radsniff`, `radsqlrelay`, `radtest`, `radwho` and `radzap`.
+- `eapol_test` is compiled from pinned FreeRADIUS and hostap revisions.
+- `radperf` 2.0.1 is installed from the [Network RADIUS package](https://networkradius.com/radius-performance-testing/).
 
-## Install
-- Container build
-```
-git clone git@github.com:miniradius/docker-radius-tools.git
+## Quick start
+
+```sh
+git clone https://github.com/miniradius/docker-radius-tools.git
 cd docker-radius-tools
-docker build --platform linux/amd64 . -t radius-tools
-```
-- Try `docker run -it radius-tools eapol_test -v`
-
-## Notes
-- Based on Debian 13 (Trixie) Slim for `linux/amd64`. On other architectures, specify `--platform linux/amd64`, for example `docker run -it --platform linux/amd64 radius-tools radperf`.
-- If you're going to use tools really often, create yourself shell aliases.
-- Keep the localhost address in mind as we run the tools from the Docker network environment. The localhost address as seen by tools is of course the address of the docker container, not the host. Use either the `host.docker.internal` address or the external IP address of the host if you are testing local RADIUS services:
-
-```
-docker run -it radius-tools radtest joe foo host.docker.internal:1812 1 abcd
+docker build --platform linux/amd64 -t radius-tools .
+docker run --rm --platform linux/amd64 radius-tools eapol_test -v
+docker run --rm --platform linux/amd64 radius-tools radperf -v
 ```
 
-- If pipes are used in the command, they must be run via `bash c '...|...'`
+An ARM host needs amd64 emulation to build and run this image. The build runs `radperf -v` after installation to verify that the binary starts.
 
-```
-docker run -it radius-tools bash -c 'echo "Message-Authenticator = 0x00" | radclient -r 1 host.docker.internal status abcd'
+## Connect to a RADIUS server
+
+Inside the container, `localhost` refers to the container itself. To reach a RADIUS server running on the host, use the address for your container engine.
+
+- **Docker Desktop** resolves `host.docker.internal` automatically. [Docker Desktop networking](https://docs.docker.com/desktop/features/networking/networking-how-tos/)
+- **Docker Engine on Linux** can use the same name if you add `--add-host=host.docker.internal:host-gateway` to `docker run` before the image name. [Docker run reference](https://docs.docker.com/reference/cli/docker/container/run/#add-host)
+- **Podman** can use `host.containers.internal` when its host gateway is available. Replace `docker` with `podman` in the commands and use that hostname for the server. [Podman run reference](https://docs.podman.io/en/stable/markdown/podman-run.1.html)
+
+The server must listen on an address reachable from the container. For a remote server, use its DNS name or IP address.
+
+## Examples
+
+Replace `joe`, `foo` and `abcd` with your test username, password and RADIUS shared secret. Adjust the port to match the server.
+
+Send an authentication request with `radtest`.
+
+```sh
+docker run --rm --platform linux/amd64 radius-tools \
+  radtest joe foo host.docker.internal:1812 1 abcd
 ```
 
-- If radperf reads users from a CSV, watch out for the value of the `-c` parameter, because the value acts as a multiplier of the loaded accounts. For example, if the CSV loads 1000 accounts then `-c 2` will fire 2000 requests
-- The container includes three pre-generated CSV files (`user,password` pairs) in `/accounts/`: `accounts-10.csv`, `accounts-100.csv` and `accounts-1000.csv`. Each filename indicates the number of rows.
-- Radperf source: [Network RADIUS Performance Testing](https://networkradius.com/radius-performance-testing/)
+Send a status request with `radclient` if the server accepts status requests on the specified port. Use `docker run -i` to pass input from the host shell. To run a pipeline entirely inside the container, pass it to `bash -c`.
 
-## Examples for RADIUS server on localhost (host.docker.internal)
+```sh
+printf '%s\n' 'Message-Authenticator = 0x00' |
+  docker run --rm -i --platform linux/amd64 radius-tools \
+    radclient -r 1 host.docker.internal:1812 status abcd
+```
 
+Run an authentication load test with `radperf`. The image includes `accounts-10.csv`, `accounts-100.csv` and `accounts-1000.csv` under `/accounts/`. Each file contains test `user,password` pairs.
+
+```sh
+docker run --rm --platform linux/amd64 radius-tools \
+  radperf -s -f /accounts/accounts-1000.csv -c 1 -p 300 host.docker.internal:1812 auth abcd
 ```
-docker run -it radius-tools bash
-docker run -it radius-tools cat /etc/os-release | grep PRETTY_NAME | sed 's/PRETTY_NAME=//'
-docker run -it radius-tools radtest joe foo host.docker.internal:1812 1 abcd
-docker run -it radius-tools bash -c 'echo "Message-Authenticator = 0x00" | radclient -r 1 host.docker.internal status abcd'
-docker run -it radius-tools bash -c 'echo "User-Name = joe,User-Password = foo" | radperf -x -s -c 1000 -p 300 host.docker.internal:1812 auth abcd'
-docker run -it radius-tools radperf -x -s -f /accounts/accounts-1000.csv -c 1 -p 300 host.docker.internal:1812 auth abcd
-```
+
+- `-c` sends each input request the specified number of times. With 1,000 accounts and `-c 2`, RadPerf sends 2,000 requests before retries.
+- `-p` sets the maximum number of requests in flight at once.
+- `-n` limits the send rate in packets per second. Add it when you need a rate cap.
+- `-s` prints a summary. Use `-x` to debug individual requests.
