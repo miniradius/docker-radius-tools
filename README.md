@@ -11,22 +11,51 @@ This Git repository contains the Dockerfiles, release automation, and sample acc
 ## Quick start
 
 ```sh
-git clone https://github.com/miniradius/docker-radius-tools.git
-cd docker-radius-tools
-docker build -t radius-tools .
-docker run --rm radius-tools eapol_test -v
-docker run --rm radius-tools radperf -v
+docker run --rm ghcr.io/miniradius/docker-radius-tools:latest eapol_test -v
 ```
 
+Docker pulls the image automatically if it is missing locally. To refresh a cached copy, run `docker pull ghcr.io/miniradius/docker-radius-tools:latest`.
+
+### Build locally
+
+```sh
+git clone https://github.com/miniradius/docker-radius-tools.git
+cd docker-radius-tools
+docker build -t docker-radius-tools:local .
+docker run --rm docker-radius-tools:local eapol_test -v
+```
+
+To run the examples with your local build, use `docker-radius-tools:local` as the image name.
+
 The build selects and verifies the `radperf-rs` binary for the target architecture. The image includes the FreeRADIUS dictionary and sets `FREERADIUS_DICTIONARY_PATH` to its location.
+
+## 💡 Shell alias
+
+Use a shell alias to shorten commands you run frequently. For example, add this alias for the GHCR image to your `~/.zshrc` or `~/.bashrc`.
+
+```sh
+alias radius-tools='docker run --rm -i ghcr.io/miniradius/docker-radius-tools:latest'
+```
+
+Then use the alias to check the tool versions.
+
+```sh
+radius-tools eapol_test -v
+radius-tools radperf -v
+```
+
+The `-i` option keeps standard input open so you can pipe RADIUS attributes into `radclient`. This example sends a status request to a server that accepts status requests on port 1812.
+
+```sh
+printf '%s\n' 'Message-Authenticator = 0x00' |
+  radius-tools radclient -r 1 host.docker.internal:1812 status abcd
+```
 
 ## Container registry
 
 The [release workflow](.github/workflows/publish-image.yml) builds and checks both architectures. It publishes the latest stable GitHub Release as a single OCI image index at `ghcr.io/miniradius/docker-radius-tools:latest`. The GitHub release tag is recorded in the image metadata. A manual workflow run verifies the build and source collection locally on the runner.
 
 The workflow generates `debian-sources-<index-sha256>.tar` during the release build and uploads it as an asset to the [GitHub Release](https://github.com/miniradius/docker-radius-tools/releases) before pushing the image. The archive contains the OCI index, the package inventory for each architecture and the exact Debian source packages for those inventories. The image contains the copyright notices for the packaged utilities, `eapol_test` and `radperf-rs`.
-
-GHCR packages are private on first publication. To allow anonymous pulls, set the package visibility to public in GitHub Packages.
 
 ## Connect to a RADIUS server
 
@@ -45,7 +74,7 @@ Replace `joe`, `foo` and `abcd` with your test username, password and RADIUS sha
 Send an authentication request with `radtest`.
 
 ```sh
-docker run --rm radius-tools \
+docker run --rm ghcr.io/miniradius/docker-radius-tools:latest \
   radtest joe foo host.docker.internal:1812 1 abcd
 ```
 
@@ -53,14 +82,14 @@ Send a status request with `radclient` if the server accepts status requests on 
 
 ```sh
 printf '%s\n' 'Message-Authenticator = 0x00' |
-  docker run --rm -i radius-tools \
+  docker run --rm -i ghcr.io/miniradius/docker-radius-tools:latest \
     radclient -r 1 host.docker.internal:1812 status abcd
 ```
 
 Run an authentication load test with `radperf`. The image includes `accounts-10.csv`, `accounts-100.csv` and `accounts-1000.csv` under `/accounts/`. Each file contains test `user,password` pairs.
 
 ```sh
-docker run --rm radius-tools \
+docker run --rm ghcr.io/miniradius/docker-radius-tools:latest \
   radperf -s -f /accounts/accounts-1000.csv -c 1 -p 300 host.docker.internal:1812 auth abcd
 ```
 
