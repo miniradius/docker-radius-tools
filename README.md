@@ -30,7 +30,7 @@ docker run -it radius-tools bash -c 'echo "Message-Authenticator = 0x00" | radcl
 ```
 
 - If radperf reads users from a CSV, watch out for the value of the `-c` parameter, because the value acts as a multiplier of the loaded accounts. For example, if the CSV loads 1000 accounts then `-c 2` will fire 2000 requests
-- In the root directory of the container there are three pre-generated CSV files (`user,password` pairs) labeled with the number of lines: `accounts-10.csv`, `accounts-100.csv` and `accounts-1000.csv`. They are available here for radperf or other testing purposes.
+- The container includes three pre-generated CSV files (`user,password` pairs) in `/accounts/`: `accounts-10.csv`, `accounts-100.csv` and `accounts-1000.csv`. Each filename indicates the number of rows.
 - Radperf source: [Network RADIUS Performance Testing](https://networkradius.com/radius-performance-testing/)
 
 ## Examples for RADIUS server on localhost (host.docker.internal)
@@ -41,5 +41,5 @@ docker run -it radius-tools cat /etc/os-release | grep PRETTY_NAME | sed 's/PRET
 docker run -it radius-tools radtest joe foo host.docker.internal:1812 1 abcd
 docker run -it radius-tools bash -c 'echo "Message-Authenticator = 0x00" | radclient -r 1 host.docker.internal status abcd'
 docker run -it radius-tools bash -c 'echo "User-Name = joe,User-Password = foo" | radperf -x -s -c 1000 -p 300 host.docker.internal:1812 auth abcd'
-docker run -it radius-tools radperf -x -s -f /accounts-1000.csv -c 1 -p 300 host.docker.internal:1812 auth abcd
+docker run -it radius-tools radperf -x -s -f /accounts/accounts-1000.csv -c 1 -p 300 host.docker.internal:1812 auth abcd
 ```
