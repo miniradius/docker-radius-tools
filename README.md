@@ -6,7 +6,7 @@ This Git repository contains the Dockerfiles, release automation, and sample acc
 
 - Debian's [FreeRADIUS utilities](https://packages.debian.org/trixie/freeradius-utils) provide `radclient`, `radcrypt`, `radeapclient`, `radlast`, `radsecret`, `radsniff`, `radsqlrelay`, `radtest`, `radwho` and `radzap`.
 - `eapol_test` is compiled from pinned FreeRADIUS and hostap revisions.
-- `radperf` is the executable from the MIT-licensed [radperf-rs v0.1.0 release](https://github.com/miniradius/radperf-rs/releases/tag/v0.1.0).
+- `radperf` is the executable from the MIT-licensed [radperf-rs v0.1.1 release](https://github.com/miniradius/radperf-rs/releases/tag/v0.1.1).
 
 ## Quick start
 

@@ -17,15 +17,15 @@ RUN git init /freeradius-server && \
     install -m 0755 /freeradius-server/scripts/ci/eapol_test/eapol_test /usr/bin/eapol_test && \
     install -Dm 0644 /hostap-build/hostapd/COPYING /usr/share/doc/eapol_test/copyright
 
-# Install radperf-rs v0.1.0 from the verified release assets.
+# Install radperf-rs v0.1.1 from the verified release assets.
 RUN set -eu; \
-    radperf_version=v0.1.0; \
+    radperf_version=v0.1.1; \
     radperf_asset="radperf-linux-$(dpkg --print-architecture)"; \
     radperf_release="https://github.com/miniradius/radperf-rs/releases/download/${radperf_version}"; \
     radperf_dir="$(mktemp -d)"; \
     cd "$radperf_dir"; \
     curl --fail --silent --show-error --location --remote-name "${radperf_release}/SHA256SUMS"; \
-    printf '%s  %s\n' 35b7af49423a2e848b187bf39cad68c527fdf3b0bf0ce1c6406dea598f7c2ffa SHA256SUMS | sha256sum --check; \
+    printf '%s  %s\n' 6a25916d6d3a2e7d52e444098db9f7786c35e267f7d1796cadbbe73a1bed7f50 SHA256SUMS | sha256sum --check; \
     curl --fail --silent --show-error --location --remote-name "${radperf_release}/${radperf_asset}"; \
     sha256sum --check --strict --ignore-missing SHA256SUMS; \
     install -m 0755 "$radperf_asset" /usr/local/bin/radperf; \
