@@ -24,6 +24,7 @@ jobs:
       packages: write
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name || 'dry-run' }}
+      IMAGE_DESCRIPTION: RADIUS CLI utilities, including eapol_test and radperf-rs
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -44,6 +45,7 @@ jobs:
             --label "org.opencontainers.image.version=$RELEASE_TAG" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --label "org.opencontainers.image.documentation=https://github.com/$GITHUB_REPOSITORY/releases/tag/$RELEASE_TAG" \
+            --annotation "index:org.opencontainers.image.description=$IMAGE_DESCRIPTION" \
             --output "type=oci,tar=false,dest=$RUNNER_TEMP/radius-image" .
       - name: Verify the image and collect Debian sources
         run: |
@@ -74,7 +76,9 @@ jobs:
             radius-tools-check:amd64 bash /collect-sources.sh \
             /bundle/debian /bundle/amd64.txt /bundle/arm64.txt
           skopeo inspect --raw "oci:$RUNNER_TEMP/radius-image" > "$bundle/index.json"
-          jq -e '.mediaType == "application/vnd.oci.image.index.v1+json" and
+          jq -e --arg description "$IMAGE_DESCRIPTION" '
+            .mediaType == "application/vnd.oci.image.index.v1+json" and
+            .annotations["org.opencontainers.image.description"] == $description and
             ([.manifests[].platform | "\(.os)/\(.architecture)"] | sort) ==
             ["linux/amd64", "linux/arm64"]' "$bundle/index.json"
           index_digest=$(skopeo manifest-digest "$bundle/index.json")

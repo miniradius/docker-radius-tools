@@ -36,6 +36,7 @@ RUN set -eu; \
 FROM debian:trixie-slim
 
 LABEL maintainer="github.com/miniradius" \
+      org.opencontainers.image.title="docker-radius-tools" \
       org.opencontainers.image.source="https://github.com/miniradius/docker-radius-tools" \
       org.opencontainers.image.description="RADIUS CLI utilities, including eapol_test and radperf-rs"
 

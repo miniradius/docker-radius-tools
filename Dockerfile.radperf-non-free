@@ -2,7 +2,10 @@ FROM --platform=linux/amd64 debian:trixie-slim
 
 LABEL architecture="amd64" \
       maintainer="github.com/miniradius" \
-      desc="RADIUS CLI utilities from FreeRADIUS (eapol_test, radclient, radcrypt, radeapclient, radlast, radperf, radsecret, radsniff, radsqlrelay, radtest, radwho, radzap)"
+      desc="RADIUS CLI utilities from FreeRADIUS (eapol_test, radclient, radcrypt, radeapclient, radlast, radperf, radsecret, radsniff, radsqlrelay, radtest, radwho, radzap)" \
+      org.opencontainers.image.title="docker-radius-tools (legacy RadPerf)" \
+      org.opencontainers.image.source="https://github.com/miniradius/docker-radius-tools" \
+      org.opencontainers.image.description="RADIUS CLI utilities, including eapol_test and proprietary RadPerf 2.0.1 from Network RADIUS"
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEBCONF_NOWARNINGS=yes
